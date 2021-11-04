@@ -1,0 +1,139 @@
+"""CST 2101 – Business Intelligence Programming Project Part A: Data Analysis
+
+Text analysis and the statistical distribution of words can tell us a lot about who wrote it and such an analysis of
+corporate emails was a key factor in the prosecution of Enron corporation executives for insider trading.  Specifically,
+the increasingly frequent use of pronouns in email was cited as a metric for detecting deceptive communication in that
+case.
+
+The client would eventually like to work along these lines, but for now wants you to expose some concepts about
+processing text so that they can determine how they to better analyze corporate documents as a first step.
+
+Since their internal documents are sensitive they have asked you to analyze text copy of three novels: Charles Dickens’
+A Tale of Two Cities, Leo Tolstoy’s War and Peace, and Victor Hugo’s Les Miserables.
+
+Created by: solo0060
+Created date: 11/23/2019
+"""
+
+import os
+
+from tkinter import ttk
+from tkinter import messagebox
+from tkinter.ttk import Progressbar
+from tkinter.messagebox import askokcancel
+from tkinter.filedialog import asksaveasfilename
+from tkinter import Tk, filedialog, Button, Entry, StringVar
+
+from analyzer import Analyzer
+
+
+class App:
+	"""GUI class
+	"""
+	def __init__(self):
+		"""Variable initialization
+		"""
+		self.window = Tk()
+		width = 400
+		height = 150
+		x = (self.window.winfo_screenwidth() // 2) - (width // 2)
+		y = (self.window.winfo_screenheight() // 2) - (height // 2)
+		self.window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+		self.window.title('Project Part A: Data Analysis')
+		self.initGUI()
+		self.analyzer = None
+		self.username = 'solo0060'
+
+	def initGUI(self):
+		"""GUI initialization: buttons, entry, progressbar
+		"""
+		self.chooseFileButton = Button(self.window, text='Choose file to analysis', command=self.chooseFile)
+		self.chooseFileButton.place(x=30, y=10, width=330)
+
+		self.filepathEntryText = StringVar()
+		filepathEntry = Entry(self.window, text=self.filepathEntryText, width=50, state='disabled')
+		filepathEntry.place(x=10, y=45, width=380)
+
+		style = ttk.Style()
+		style.theme_use('default')
+		style.configure("green.Horizontal.TProgressbar", background='green')
+
+		self.progressbar = Progressbar(self.window, length=380, style='green.Horizontal.TProgressbar')
+		self.progressbar.place(x=10, y=70, width=380, height=8)
+		self.progressbar['value'] = 0
+
+		self.analyzeButton = Button(self.window, text='Analyze', command=self.analyze)
+		self.analyzeButton.place(x=10, y=85, width=380)
+
+		self.saveButton = Button(self.window, text='Save to file', state='disabled', command=self.writeFile)
+		self.saveButton.place(x=10, y=115, width=180)
+
+		exitButton = Button(self.window, text='Exit', command=self.exit)
+		exitButton.place(x=210, y=115, width=180)
+
+	def exit(self):
+		if self.analyzer is not None and self.analyzer.isWorking:
+			if askokcancel("Info", "Do you really want to stop the analysis?"):
+				self.window.destroy()
+		else:
+			self.window.destroy()
+
+	def analyze(self):
+		"""Disable some buttons, start analizer
+		"""
+		try:
+			self.analyzer.analyze(self.progressbar, self.normalizeButtons)
+			self.chooseFileButton['state'] = 'disabled'
+			self.analyzeButton['state'] = 'disabled'
+			self.progressbar['value'] = 0
+		except:
+			messagebox.showinfo('Error', 'You have not selected a file')
+
+	def normalizeButtons(self):
+		"""Change buttons state on 'normal'
+		"""
+		self.chooseFileButton['state'] = 'normal'
+		self.analyzeButton['state'] = 'normal'
+		self.saveButton['state'] = 'normal'
+
+	def chooseFile(self):
+		"""Choose file, initialize Analyzer
+		"""
+		try:
+			filepath = filedialog.askopenfilename(filetypes=[('Text files', '*.txt')])
+			self.analyzer = Analyzer(filepath)
+			self.filepathEntryText.set(filepath)
+			self.saveButton['state'] = 'disabled'
+		except:
+			messagebox.showinfo('Error', 'You have not selected a file or choosed invalid format file.\n'
+			                     'The correct name of the file: "<username>-PartA-<novel>.txt"')
+
+	def writeFile(self):
+		"""Write to choosed file
+		"""
+		try:
+			initialFilename = self.username + '-PartA-' + self.analyzer.novelName + 'Analysis.txt'
+			filename = asksaveasfilename(filetypes=[('Text files', '*.txt')], initialfile=initialFilename)
+			file = open(filename, 'w', encoding='utf-8')
+			file.write('Name of text: ' + str(self.analyzer.novelName) + "\n")
+			file.write('Total Non-blank Character Count: ' + str(self.analyzer.charactersCount) + "\n")
+			file.write('Total Blank Character Count: ' + str(self.analyzer.blankCharactersCount) + "\n")
+			file.write('Percentage Blank Character: ' + str(self.analyzer.percentageBlankCharacters) + "\n")
+			file.write('Total Word Count: ' + str(self.analyzer.wordCount) + "\n")
+			file.write('Word, Count:\n')
+
+			for word in self.analyzer.occurrences:
+				file.write(word + ', ' + str(self.analyzer.occurrences.get(word)) + "\n")
+
+			messagebox.showinfo('Info', 'Analysis writed.\nFile location: "' + os.path.abspath(filename) + '"')
+		except BaseException as e:
+			messagebox.showinfo('Exception has occurred', type(e))
+
+	def launch(self):
+		"""Launch application
+		"""
+		self.window.mainloop()
+
+
+app = App()
+app.launch()
